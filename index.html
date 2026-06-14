@@ -1,0 +1,1133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Doomloop Troubleshooter</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #faf8f5;
+    --surface: #ffffff;
+    --surface2: #f5f2ee;
+    --border: #e8e0d6;
+    --border2: #d9cfc3;
+    --text: #1a1510;
+    --muted: #7a6e63;
+    --accent: #c6613f;
+    --accent-dim: #c6613f12;
+    --accent-border: #c6613f35;
+    --accent-light: #f5e8e2;
+    --red: #c0392b;
+    --red-dim: #c0392b10;
+    --amber: #b5620a;
+    --amber-dim: #b5620a10;
+    --green: #2d7a4f;
+    --green-dim: #2d7a4f10;
+    --mono: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+    --sans: -apple-system, 'Inter', sans-serif;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    min-height: 100vh;
+    display: grid;
+    grid-template-rows: auto 1fr;
+    font-size: 14px;
+    line-height: 1.6;
+  }
+
+  header {
+    border-bottom: 1.5px solid var(--border);
+    padding: 16px 32px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: var(--surface);
+  }
+
+  .logo-mark {
+    width: 30px; height: 30px;
+    background: var(--accent);
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 15px;
+    color: white;
+    font-weight: 700;
+    letter-spacing: -1px;
+  }
+
+  .logo-text { font-size: 15px; font-weight: 600; color: var(--text); letter-spacing: -0.02em; }
+  .logo-sep { color: var(--border2); margin: 0 2px; }
+  .logo-sub { font-size: 13px; color: var(--muted); }
+
+  .badge {
+    margin-left: auto;
+    font-size: 11px;
+    padding: 3px 10px;
+    border-radius: 20px;
+    border: 1.5px solid var(--accent-border);
+    color: var(--accent);
+    background: var(--accent-dim);
+    font-family: var(--mono);
+    font-weight: 500;
+  }
+
+  .py-badge {
+    font-size: 11px;
+    padding: 3px 10px;
+    border-radius: 20px;
+    border: 1.5px solid var(--border);
+    color: var(--muted);
+    background: var(--surface2);
+    font-family: var(--mono);
+    font-weight: 500;
+    display: flex; align-items: center; gap: 5px;
+  }
+
+  .py-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--amber); }
+
+  main {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    height: calc(100vh - 63px);
+  }
+
+  .panel {
+    padding: 24px 28px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    overflow-y: auto;
+  }
+
+  .panel-left { border-right: 1.5px solid var(--border); background: var(--surface); }
+  .panel-right { background: var(--bg); }
+
+  .panel-label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .panel-label::after {
+    content: '';
+    flex: 1;
+    height: 1.5px;
+    background: var(--border);
+  }
+
+  .scenario-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 8px;
+  }
+
+  .scenario-btn {
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: 9px;
+    padding: 10px 12px;
+    cursor: pointer;
+    text-align: left;
+    transition: all 0.14s;
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 12px;
+  }
+
+  .scenario-btn:hover { border-color: var(--accent-border); background: var(--accent-dim); }
+  .scenario-btn.active { border-color: var(--accent); background: var(--accent-light); }
+  .scenario-btn .s-title { font-weight: 600; margin-bottom: 2px; color: var(--text); font-size: 12px; }
+  .scenario-btn .s-sub { color: var(--muted); font-size: 11px; line-height: 1.4; }
+
+  /* Tabs */
+  .tabs { display: flex; gap: 0; border-bottom: 1.5px solid var(--border); margin-bottom: -16px; }
+  .tab {
+    padding: 8px 14px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--muted);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1.5px;
+    transition: all 0.14s;
+    user-select: none;
+  }
+  .tab:hover { color: var(--text); }
+  .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+  .tab-content { display: none; flex-direction: column; gap: 0; }
+  .tab-content.active { display: flex; }
+
+  .field-label {
+    font-size: 11px;
+    color: var(--muted);
+    margin-bottom: 5px;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+  }
+
+  textarea {
+    width: 100%;
+    background: var(--surface2);
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 12px;
+    line-height: 1.65;
+    padding: 12px 14px;
+    resize: vertical;
+    min-height: 200px;
+    outline: none;
+    transition: border-color 0.14s;
+  }
+
+  textarea:focus { border-color: var(--accent-border); background: var(--surface); }
+
+  /* Python code block */
+  .py-block {
+    background: #1e1b18;
+    border-radius: 9px;
+    overflow: hidden;
+    font-family: var(--mono);
+    font-size: 12px;
+    line-height: 1.7;
+  }
+
+  .py-block-header {
+    background: #2a2520;
+    padding: 7px 14px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    border-bottom: 1px solid #3a3028;
+  }
+
+  .py-block-title { color: #a09080; font-size: 11px; }
+  .py-block-lang { color: #c6613f; font-size: 10px; font-weight: 600; margin-left: auto; }
+
+  .py-block pre {
+    padding: 14px 16px;
+    color: #e8ddd0;
+    white-space: pre;
+    overflow-x: auto;
+    margin: 0;
+    font-size: 12px;
+  }
+
+  .kw { color: #c6a060; }
+  .fn { color: #7ab8d4; }
+  .st { color: #90c090; }
+  .cm { color: #6a5e52; font-style: italic; }
+  .nm { color: #e8c090; }
+  .tp { color: #b090d0; }
+  .op { color: #c6613f; }
+  .num { color: #a0d0a0; }
+
+  .run-btn {
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 9px;
+    padding: 11px 20px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    justify-content: center;
+    transition: opacity 0.14s, transform 0.1s;
+    font-family: var(--sans);
+    letter-spacing: -0.01em;
+  }
+
+  .run-btn:hover { opacity: 0.88; }
+  .run-btn:active { transform: scale(0.98); }
+  .run-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .spinner {
+    width: 14px; height: 14px;
+    border: 2px solid #ffffff40;
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    display: none;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .output-area {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .empty-state {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    color: var(--muted);
+    text-align: center;
+    padding: 40px;
+  }
+
+  .empty-icon {
+    width: 48px; height: 48px;
+    border: 2px solid var(--border);
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px;
+    background: var(--surface);
+  }
+
+  .result-card {
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: 11px;
+    overflow: hidden;
+  }
+
+  .result-header {
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border-bottom: 1.5px solid var(--border);
+    background: var(--surface2);
+  }
+
+  .status-dot {
+    width: 9px; height: 9px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .dot-red { background: var(--red); }
+  .dot-amber { background: var(--amber); }
+  .dot-green { background: var(--green); }
+  .dot-accent { background: var(--accent); }
+
+  .result-title { font-size: 13px; font-weight: 600; }
+  .result-meta { margin-left: auto; font-size: 11px; color: var(--muted); font-family: var(--mono); }
+
+  .result-body { padding: 16px; }
+
+  .output-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 14px;
+  }
+
+  .output-field { display: flex; flex-direction: column; gap: 4px; }
+  .output-key { font-size: 10px; color: var(--muted); letter-spacing: 0.07em; text-transform: uppercase; font-weight: 600; }
+  .output-val { font-size: 13px; color: var(--text); font-weight: 600; }
+
+  .confidence-bar {
+    height: 5px;
+    background: var(--border);
+    border-radius: 3px;
+    overflow: hidden;
+    margin-top: 5px;
+  }
+
+  .confidence-fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.7s cubic-bezier(.4,0,.2,1);
+  }
+
+  .tag-row { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 4px; }
+
+  .tag {
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 5px;
+    font-family: var(--mono);
+    font-weight: 600;
+    border: 1.5px solid transparent;
+  }
+
+  .tag-red { background: var(--red-dim); color: var(--red); border-color: #c0392b25; }
+  .tag-amber { background: var(--amber-dim); color: var(--amber); border-color: #b5620a25; }
+  .tag-green { background: var(--green-dim); color: var(--green); border-color: #2d7a4f25; }
+  .tag-accent { background: var(--accent-dim); color: var(--accent); border-color: var(--accent-border); }
+  .tag-gray { background: var(--surface2); color: var(--muted); border-color: var(--border); }
+
+  .divider { height: 1.5px; background: var(--border); margin: 14px 0; }
+
+  .action-banner {
+    padding: 10px 14px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border: 1.5px solid transparent;
+  }
+
+  .action-continue { background: var(--green-dim); color: var(--green); border-color: #2d7a4f25; }
+  .action-ask { background: var(--amber-dim); color: var(--amber); border-color: #b5620a25; }
+  .action-escalate { background: var(--red-dim); color: var(--red); border-color: #c0392b25; }
+
+  .constraints-list { display: flex; flex-direction: column; gap: 5px; margin-top: 6px; }
+  .constraint-item {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+    padding: 6px 10px;
+    background: var(--surface2);
+    border-radius: 6px;
+    border-left: 3px solid var(--accent-border);
+  }
+
+  .raw-json {
+    background: #1e1b18;
+    border-radius: 7px;
+    padding: 12px 14px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: #a09080;
+    white-space: pre-wrap;
+    word-break: break-all;
+    max-height: 200px;
+    overflow-y: auto;
+    margin-top: 8px;
+  }
+
+  details summary {
+    cursor: pointer;
+    font-size: 11px;
+    color: var(--muted);
+    user-select: none;
+    margin-top: 10px;
+    list-style: none;
+    font-weight: 500;
+  }
+
+  details summary::before { content: '▶  '; font-size: 9px; }
+  details[open] summary::before { content: '▼  '; }
+
+  .error-card {
+    background: var(--red-dim);
+    border: 1.5px solid #c0392b25;
+    border-radius: 10px;
+    padding: 14px 16px;
+    font-size: 13px;
+    color: var(--red);
+  }
+
+  .info-row {
+    display: flex; align-items: flex-start; gap: 8px;
+    font-size: 12px; color: var(--muted); line-height: 1.5;
+    padding: 10px 12px;
+    background: var(--accent-dim);
+    border-radius: 7px;
+    border: 1.5px solid var(--accent-border);
+    margin-bottom: 4px;
+  }
+
+  .api-key-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 16px;
+    background: var(--surface2);
+    border-bottom: 1.5px solid var(--border);
+    flex-wrap: wrap;
+  }
+
+  .provider-toggle {
+    display: flex;
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+    flex-shrink: 0;
+    background: var(--surface);
+  }
+
+  .provider-btn {
+    padding: 5px 13px;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    border: none;
+    background: transparent;
+    color: var(--muted);
+    font-family: var(--sans);
+    transition: all 0.14s;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+  }
+
+  .provider-btn.active {
+    background: var(--accent);
+    color: #fff;
+  }
+
+  .provider-btn:not(.active):hover { background: var(--surface2); color: var(--text); }
+
+  .api-key-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--muted);
+    white-space: nowrap;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .api-key-input {
+    flex: 1;
+    min-width: 220px;
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: 7px;
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 12px;
+    padding: 6px 10px;
+    outline: none;
+    min-height: unset;
+    resize: none;
+    transition: border-color 0.14s;
+  }
+
+  .api-key-input:focus { border-color: var(--accent-border); background: var(--surface); }
+
+  .api-key-hint {
+    font-size: 10px;
+    color: var(--muted);
+    opacity: 0.7;
+    white-space: nowrap;
+  }
+
+  .model-pill {
+    font-size: 10px;
+    padding: 3px 9px;
+    border-radius: 20px;
+    border: 1.5px solid var(--border);
+    color: var(--muted);
+    background: var(--surface);
+    font-family: var(--mono);
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo-mark">⟳</div>
+  <span class="logo-text">Doomloop Troubleshooter</span>
+  <span class="logo-sep">·</span>
+  <span class="logo-sub">diagnostic agent</span>
+  <div class="py-badge"><div class="py-dot"></div> Python impl</div>
+  <span class="badge">v0.1 · demo</span>
+</header>
+<div class="api-key-row">
+  <div class="provider-toggle">
+    <button class="provider-btn active" id="btn-anthropic" onclick="setProvider('anthropic')">Anthropic</button>
+    <button class="provider-btn" id="btn-openai" onclick="setProvider('openai')">OpenAI</button>
+    <button class="provider-btn" id="btn-gemini" onclick="setProvider('gemini')">Gemini</button>
+  </div>
+  <span class="api-key-label" id="key-label">API Key</span>
+  <input type="password" class="api-key-input" id="api-key-input" placeholder="sk-ant-api..." autocomplete="off" />
+  <span class="model-pill" id="model-pill">claude-sonnet-4-6</span>
+  <span class="api-key-hint">Not stored · session only</span>
+</div>
+
+<main>
+  <!-- LEFT PANEL -->
+  <div class="panel panel-left">
+    <div class="panel-label">Scenarios</div>
+
+    <div class="scenario-grid">
+      <button class="scenario-btn active" onclick="loadScenario('auth')" id="btn-auth">
+        <div class="s-title">OAuth loop</div>
+        <div class="s-sub">Token not persisting, 4 attempts</div>
+      </button>
+      <button class="scenario-btn" onclick="loadScenario('regex')" id="btn-regex">
+        <div class="s-title">Regex failure</div>
+        <div class="s-sub">Vague rejection, no specifics</div>
+      </button>
+      <button class="scenario-btn" onclick="loadScenario('scope')" id="btn-scope">
+        <div class="s-title">Scope creep</div>
+        <div class="s-sub">Requirements added mid-session</div>
+      </button>
+      <button class="scenario-btn" onclick="loadScenario('env')" id="btn-env">
+        <div class="s-title">Missing context</div>
+        <div class="s-sub">Agent lacks env / config info</div>
+      </button>
+      <button class="scenario-btn" onclick="loadScenario('partial')" id="btn-partial">
+        <div class="s-title">Partial fix</div>
+        <div class="s-sub">One sub-requirement keeps failing</div>
+      </button>
+      <button class="scenario-btn" onclick="loadScenario('misread')" id="btn-misread">
+        <div class="s-title">Wrong understanding</div>
+        <div class="s-sub">Agent misread intent entirely</div>
+      </button>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tabs">
+      <div class="tab active" onclick="switchTab('payload')">Payload (JSON)</div>
+      <div class="tab" onclick="switchTab('python')">Python impl</div>
+    </div>
+
+    <div class="tab-content active" id="tab-payload" style="margin-top:16px">
+      <div class="field-label">Rejection ledger (editable)</div>
+      <textarea id="payload-input" spellcheck="false"></textarea>
+    </div>
+
+    <div class="tab-content" id="tab-python" style="margin-top:16px;gap:12px">
+      <div class="info-row">
+        <span>💡</span>
+        <span>This is how the troubleshooter would be implemented in a real Python backend. The demo runs the same diagnosis logic via Anthropic, OpenAI, or Gemini.</span>
+      </div>
+
+      <div class="py-block">
+        <div class="py-block-header">
+          <div class="py-block-title">troubleshooter/payload.py</div>
+          <div class="py-block-lang">Python 3.11</div>
+        </div>
+        <pre><span class="kw">from</span> dataclasses <span class="kw">import</span> dataclass
+<span class="kw">from</span> typing <span class="kw">import</span> <span class="tp">Optional</span>
+
+<span class="op">@</span><span class="fn">dataclass</span>
+<span class="kw">class</span> <span class="nm">RejectionEntry</span>:
+    attempt: <span class="tp">int</span>
+    strategy: <span class="tp">str</span>
+    rejection: <span class="tp">str</span>
+    code_hash: <span class="tp">Optional</span>[<span class="tp">str</span>] <span class="op">=</span> <span class="kw">None</span>
+
+<span class="op">@</span><span class="fn">dataclass</span>
+<span class="kw">class</span> <span class="nm">TroubleshooterPayload</span>:
+    task_id: <span class="tp">str</span>
+    original_request: <span class="tp">str</span>
+    acceptance_criteria: <span class="tp">list</span>[<span class="tp">str</span>]
+    cycle_count: <span class="tp">int</span>
+    rejection_ledger: <span class="tp">list</span>[<span class="nm">RejectionEntry</span>]
+    similarity_scores: <span class="tp">list</span>[<span class="tp">float</span>]
+    used_strategies: <span class="tp">list</span>[<span class="tp">str</span>]
+    user_env: <span class="tp">dict</span></pre>
+      </div>
+
+      <div class="py-block">
+        <div class="py-block-header">
+          <div class="py-block-title">troubleshooter/output.py</div>
+          <div class="py-block-lang">TypedDict</div>
+        </div>
+        <pre><span class="kw">from</span> typing <span class="kw">import</span> <span class="tp">TypedDict, Optional</span>
+
+<span class="kw">class</span> <span class="nm">MissingInfo</span>(<span class="nm">TypedDict</span>):
+    type: <span class="tp">str</span>   <span class="cm"># "user" | "env"</span>
+    question: <span class="tp">str</span>
+
+<span class="kw">class</span> <span class="nm">TroubleshooterOutput</span>(<span class="nm">TypedDict</span>):
+    root_cause: <span class="tp">str</span>
+    <span class="cm"># WRONG_STRATEGY | PARTIAL_FIX</span>
+    <span class="cm"># MISSING_CONTEXT | VAGUE_REJECTION</span>
+    <span class="cm"># WRONG_UNDERSTANDING | SCOPE_CREEP</span>
+    failure_category: <span class="tp">str</span>
+    confidence: <span class="tp">float</span>
+    recommended_strategy: <span class="tp">Optional</span>[<span class="tp">str</span>]
+    missing_information: <span class="tp">Optional</span>[<span class="nm">MissingInfo</span>]
+    continue_execution: <span class="tp">bool</span>
+    updated_constraints: <span class="tp">list</span>[<span class="tp">str</span>]
+    blocking_requirement: <span class="tp">Optional</span>[<span class="tp">str</span>]
+    excluded_strategies: <span class="tp">list</span>[<span class="tp">str</span>]
+    diagnosis_summary: <span class="tp">str</span></pre>
+      </div>
+
+      <div class="py-block">
+        <div class="py-block-header">
+          <div class="py-block-title">troubleshooter/agent.py</div>
+          <div class="py-block-lang">Anthropic SDK</div>
+        </div>
+        <pre><span class="kw">import</span> anthropic, json
+<span class="kw">from</span> .payload <span class="kw">import</span> <span class="nm">TroubleshooterPayload</span>
+<span class="kw">from</span> .output  <span class="kw">import</span> <span class="nm">TroubleshooterOutput</span>
+<span class="kw">from</span> .prompts <span class="kw">import</span> <span class="nm">DIAGNOSIS_SYSTEM_PROMPT</span>
+
+<span class="nm">client</span> <span class="op">=</span> anthropic.<span class="fn">Anthropic</span>()
+
+<span class="kw">def</span> <span class="fn">run_troubleshooter</span>(
+    payload: <span class="nm">TroubleshooterPayload</span>
+) <span class="op">-></span> <span class="nm">TroubleshooterOutput</span>:
+    response <span class="op">=</span> client.messages.<span class="fn">create</span>(
+        model<span class="op">=</span><span class="st">"claude-sonnet-4-6"</span>,
+        max_tokens<span class="op">=</span><span class="num">1000</span>,
+        system<span class="op">=</span><span class="nm">DIAGNOSIS_SYSTEM_PROMPT</span>,
+        messages<span class="op">=</span>[{
+            <span class="st">"role"</span>: <span class="st">"user"</span>,
+            <span class="st">"content"</span>: json.<span class="fn">dumps</span>(
+                payload.__dict__, indent<span class="op">=</span><span class="num">2</span>
+            )
+        }]
+    )
+    raw <span class="op">=</span> response.content[<span class="num">0</span>].text
+    <span class="kw">return</span> json.<span class="fn">loads</span>(raw)</pre>
+      </div>
+
+      <div class="py-block">
+        <div class="py-block-header">
+          <div class="py-block-title">troubleshooter/prompts.py</div>
+          <div class="py-block-lang">system prompt</div>
+        </div>
+        <pre><span class="nm">DIAGNOSIS_SYSTEM_PROMPT</span> <span class="op">=</span> <span class="st">"""
+You are a doomloop diagnosis agent.
+Classify root cause into ONE of:
+  WRONG_STRATEGY | PARTIAL_FIX
+  MISSING_CONTEXT | VAGUE_REJECTION
+  WRONG_UNDERSTANDING | SCOPE_CREEP
+
+Return ONLY valid JSON matching
+TroubleshooterOutput schema.
+No markdown. No explanation.
+"""</span></pre>
+      </div>
+    </div>
+
+    <button class="run-btn" id="run-btn" onclick="runTroubleshooter()">
+      <div class="spinner" id="spinner"></div>
+      <span id="run-label">▶ Run troubleshooter</span>
+    </button>
+  </div>
+
+  <!-- RIGHT PANEL -->
+  <div class="panel panel-right">
+    <div class="panel-label">Diagnosis output</div>
+    <div class="output-area" id="output-area">
+      <div class="empty-state">
+        <div class="empty-icon">⟳</div>
+        <div style="font-size:13px;font-weight:600;color:var(--text)">No diagnosis yet</div>
+        <div style="font-size:12px;color:var(--muted)">Pick a scenario and run the troubleshooter</div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script>
+const scenarios = {
+  auth: {
+    task_id: "feat_oauth_google",
+    original_request: "Add Google OAuth login. After sign in, store token in httpOnly cookie and redirect to /dashboard.",
+    acceptance_criteria: ["user can sign in with Google", "token stored in httpOnly cookie", "redirect to /dashboard after login"],
+    cycle_count: 4,
+    rejection_ledger: [
+      { attempt: 1, strategy: "passport.js", rejection: "token not persisting after page reload" },
+      { attempt: 2, strategy: "passport.js", rejection: "still not persisting, same issue" },
+      { attempt: 3, strategy: "manual JWT", rejection: "redirect goes to /home not /dashboard" },
+      { attempt: 4, strategy: "manual JWT", rejection: "redirect still wrong" }
+    ],
+    similarity_scores: [0.93, 0.71, 0.89],
+    used_strategies: ["passport.js", "manual JWT"],
+    user_env: { framework: "Next.js 14", runtime: "Node 20", available_libs: ["next-auth"] }
+  },
+  regex: {
+    task_id: "feat_email_validator",
+    original_request: "Write a function that validates email addresses",
+    acceptance_criteria: ["rejects invalid emails", "accepts valid emails", "handles edge cases like subdomains"],
+    cycle_count: 3,
+    rejection_ledger: [
+      { attempt: 1, strategy: "basic regex", rejection: "it's wrong" },
+      { attempt: 2, strategy: "RFC 5322 regex", rejection: "still not working" },
+      { attempt: 3, strategy: "RFC 5322 regex modified", rejection: "nope still broken" }
+    ],
+    similarity_scores: [0.62, 0.91],
+    used_strategies: ["basic regex", "RFC 5322 regex"],
+    user_env: { framework: "Node.js", runtime: "Node 18", available_libs: [] }
+  },
+  scope: {
+    task_id: "feat_user_profile",
+    original_request: "Build a user profile page showing name and avatar",
+    acceptance_criteria: ["shows user name", "shows avatar image"],
+    cycle_count: 3,
+    rejection_ledger: [
+      { attempt: 1, strategy: "static component", rejection: "also needs to show email and bio" },
+      { attempt: 2, strategy: "extended component", rejection: "now also add edit mode with save button" },
+      { attempt: 3, strategy: "extended with edit mode", rejection: "edit mode UI is wrong" }
+    ],
+    similarity_scores: [0.28, 0.41],
+    used_strategies: ["static component", "extended component", "extended with edit mode"],
+    user_env: { framework: "React 18", runtime: "Node 20", available_libs: ["tailwindcss"] }
+  },
+  env: {
+    task_id: "feat_db_connection",
+    original_request: "Connect to PostgreSQL and run a query to get all users",
+    acceptance_criteria: ["connects to DB successfully", "returns list of users", "handles connection errors"],
+    cycle_count: 3,
+    rejection_ledger: [
+      { attempt: 1, strategy: "pg library", rejection: "connection fails" },
+      { attempt: 2, strategy: "pg library with pool", rejection: "still failing to connect" },
+      { attempt: 3, strategy: "pg with SSL", rejection: "connection error different message" }
+    ],
+    similarity_scores: [0.81, 0.74],
+    used_strategies: ["pg library", "pg with pool", "pg with SSL"],
+    user_env: { framework: "Express", runtime: "Node 18", available_libs: ["pg", "prisma"], db_host: "not provided", ssl_mode: "unknown" }
+  },
+  partial: {
+    task_id: "feat_csv_import",
+    original_request: "Build a CSV import endpoint that parses the file, validates each row, and inserts valid rows into the database",
+    acceptance_criteria: ["parses CSV file", "validates each row against schema", "inserts valid rows into DB", "returns error report for invalid rows"],
+    cycle_count: 4,
+    rejection_ledger: [
+      { attempt: 1, strategy: "csv-parser + raw SQL", rejection: "parsing works but invalid rows aren't reported" },
+      { attempt: 2, strategy: "csv-parser + raw SQL", rejection: "error report added but valid rows aren't being inserted" },
+      { attempt: 3, strategy: "papaparse + ORM", rejection: "insertion works now but error report is missing again" },
+      { attempt: 4, strategy: "papaparse + ORM", rejection: "error report is back but it's not including row numbers" }
+    ],
+    similarity_scores: [0.78, 0.55, 0.82],
+    used_strategies: ["csv-parser + raw SQL", "papaparse + ORM"],
+    user_env: { framework: "Express", runtime: "Node 20", available_libs: ["multer", "pg"] }
+  },
+  misread: {
+    task_id: "feat_date_formatter",
+    original_request: "Format dates in the user's local timezone, showing 'today', 'yesterday', or the full date",
+    acceptance_criteria: ["shows 'today' for today's date", "shows 'yesterday' for yesterday", "shows full date otherwise", "respects user's local timezone"],
+    cycle_count: 3,
+    rejection_ledger: [
+      { attempt: 1, strategy: "date-fns format", rejection: "this just formats dates, it doesn't do relative display" },
+      { attempt: 2, strategy: "date-fns formatDistance", rejection: "this shows '2 days ago' not 'yesterday' — I want the exact words" },
+      { attempt: 3, strategy: "date-fns formatRelative", rejection: "still not right, it shows 'last Monday' instead of the full date for older dates" }
+    ],
+    similarity_scores: [0.45, 0.73],
+    used_strategies: ["date-fns format", "date-fns formatDistance", "date-fns formatRelative"],
+    user_env: { framework: "React 18", runtime: "Node 20", available_libs: ["date-fns", "dayjs"] }
+  }
+};
+
+function switchTab(tab) {
+  document.querySelectorAll('.tab').forEach((t, i) => {
+    t.classList.toggle('active', (i === 0 && tab === 'payload') || (i === 1 && tab === 'python'));
+  });
+  document.getElementById('tab-payload').classList.toggle('active', tab === 'payload');
+  document.getElementById('tab-python').classList.toggle('active', tab === 'python');
+}
+
+function loadScenario(key) {
+  document.querySelectorAll('.scenario-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('btn-' + key).classList.add('active');
+  document.getElementById('payload-input').value = JSON.stringify(scenarios[key], null, 2);
+}
+
+loadScenario('auth');
+
+// Provider state
+let currentProvider = 'anthropic';
+
+const PROVIDER_CONFIG = {
+  anthropic: {
+    placeholder: 'sk-ant-api03-...',
+    model: 'claude-sonnet-4-6',
+    label: 'Anthropic Key'
+  },
+  openai: {
+    placeholder: 'sk-proj-... or sk-...',
+    model: 'gpt-4o-mini',
+    label: 'OpenAI Key'
+  },
+  gemini: {
+    placeholder: 'AIza...',
+    model: 'gemini-2.5-flash',
+    label: 'Gemini Key'
+  }
+};
+
+function setProvider(p) {
+  currentProvider = p;
+  const cfg = PROVIDER_CONFIG[p];
+  document.getElementById('api-key-input').placeholder = cfg.placeholder;
+  document.getElementById('api-key-input').value = '';
+  document.getElementById('model-pill').textContent = cfg.model;
+  document.getElementById('key-label').textContent = cfg.label;
+  document.getElementById('btn-anthropic').classList.toggle('active', p === 'anthropic');
+  document.getElementById('btn-openai').classList.toggle('active', p === 'openai');
+  document.getElementById('btn-gemini').classList.toggle('active', p === 'gemini');
+}
+
+function getConfColor(c) {
+  if (c >= 0.8) return '#2d7a4f';
+  if (c >= 0.6) return '#b5620a';
+  return '#c0392b';
+}
+
+function getRCTagClass(rc) {
+  return { WRONG_STRATEGY:'tag-amber', PARTIAL_FIX:'tag-amber', MISSING_CONTEXT:'tag-red',
+           VAGUE_REJECTION:'tag-red', WRONG_UNDERSTANDING:'tag-red', SCOPE_CREEP:'tag-accent' }[rc] || 'tag-gray';
+}
+
+function getActionBanner(cont, rc) {
+  if (rc === 'VAGUE_REJECTION' || rc === 'MISSING_CONTEXT')
+    return `<div class="action-banner action-ask">⚠ Pause — clarification required from user before next attempt</div>`;
+  if (rc === 'SCOPE_CREEP')
+    return `<div class="action-banner action-ask">↺ Reset cycle counter — treat as new task, update workflow spec</div>`;
+  if (cont)
+    return `<div class="action-banner action-continue">✓ Continue — rewrite prompt with enforced strategy + hard constraints</div>`;
+  return `<div class="action-banner action-escalate">✕ Escalate — surface history to user, offer decompose / partial / reprompt</div>`;
+}
+
+const SYSTEM_PROMPT = `You are a doomloop diagnosis agent for a coding assistant. A coding agent has failed to resolve a task after multiple attempts. Diagnose WHY the loop is happening.
+
+You will receive a JSON payload with the original request, acceptance criteria, every rejected attempt (strategy + rejection reason), similarity scores, and user environment.
+
+Classify root cause into exactly ONE of:
+  WRONG_STRATEGY       — approach fundamentally unsuited to the problem
+  PARTIAL_FIX          — part works but agent keeps missing one sub-requirement
+  MISSING_CONTEXT      — agent lacks env/library/config info it needs
+  VAGUE_REJECTION      — user feedback too ambiguous to act on
+  WRONG_UNDERSTANDING  — agent misread what the user wants entirely
+  SCOPE_CREEP          — user added requirements mid-session
+
+Return ONLY valid JSON, no markdown, no explanation:
+{
+  "root_cause": "<category>",
+  "failure_category": "<short human-readable description of specific failure pattern>",
+  "confidence": <0.0 to 1.0>,
+  "recommended_strategy": "<specific approach not yet tried, or null>",
+  "missing_information": {"type": "user or env", "question": "<what info would break the loop>"} or null,
+  "continue_execution": <true or false>,
+  "updated_constraints": ["<constraint 1>", "<constraint 2>"],
+  "blocking_requirement": "<single requirement never satisfied, or null>",
+  "excluded_strategies": ["<strategy1>"],
+  "diagnosis_summary": "<one sentence citing specific evidence from the ledger>"
+}`;
+
+async function runTroubleshooter() {
+  const btn = document.getElementById('run-btn');
+  const spinner = document.getElementById('spinner');
+  const label = document.getElementById('run-label');
+  const out = document.getElementById('output-area');
+
+  let payload;
+  try {
+    payload = JSON.parse(document.getElementById('payload-input').value);
+  } catch(e) {
+    out.innerHTML = `<div class="error-card">Invalid JSON. Please check the payload format.</div>`;
+    return;
+  }
+
+  btn.disabled = true;
+  spinner.style.display = 'block';
+  label.textContent = 'Diagnosing...';
+  out.innerHTML = `<div class="empty-state"><div class="spinner" style="display:block;width:22px;height:22px;border-color:var(--border2);border-top-color:var(--accent)"></div><div style="font-size:13px;color:var(--muted);margin-top:10px">Running diagnosis...</div></div>`;
+
+  const apiKey = document.getElementById('api-key-input').value.trim();
+  if (!apiKey) {
+    out.innerHTML = `<div class="error-card">⚠ Please enter your API key in the bar at the top before running.</div>`;
+    btn.disabled = false;
+    spinner.style.display = 'none';
+    label.textContent = '▶ Run troubleshooter';
+    return;
+  }
+
+  try {
+    let response;
+    if (currentProvider === 'openai') {
+      response = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${apiKey}`
+        },
+        body: JSON.stringify({
+          model: "gpt-4o-mini",
+          max_tokens: 1000,
+          messages: [
+            { role: "system", content: SYSTEM_PROMPT },
+            { role: "user", content: JSON.stringify(payload, null, 2) }
+          ]
+        })
+      });
+    } else if (currentProvider === 'gemini') {
+      response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
+            contents: [{
+              role: "user",
+              parts: [{ text: JSON.stringify(payload, null, 2) }]
+            }],
+            generationConfig: { maxOutputTokens: 8192 }
+          })
+        }
+      );
+    } else {
+      response = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-api-key": apiKey,
+          "anthropic-version": "2023-06-01",
+          "anthropic-dangerous-allow-browser": "true"
+        },
+        body: JSON.stringify({
+          model: "claude-sonnet-4-6",
+          max_tokens: 1000,
+          system: SYSTEM_PROMPT,
+          messages: [{ role: "user", content: JSON.stringify(payload, null, 2) }]
+        })
+      });
+    }
+
+    const data = await response.json();
+    if (!response.ok) {
+      const errMsg = data?.error?.message || `HTTP ${response.status}`;
+      out.innerHTML = `<div class="error-card">API error: ${errMsg}</div>`;
+      return;
+    }
+    // Normalize response text across providers
+    let raw;
+    if (currentProvider === 'openai') {
+      raw = data.choices?.[0]?.message?.content || '';
+    } else if (currentProvider === 'gemini') {
+      const candidate = data.candidates?.[0];
+      // Detect truncation before we try to parse
+      if (candidate?.finishReason === 'MAX_TOKENS') {
+        out.innerHTML = `<div class="error-card"><strong>Gemini response was truncated (MAX_TOKENS).</strong><br><br>
+          The model ran out of output tokens mid-JSON. This usually means the thinking budget consumed most of the quota.<br><br>
+          <span style="font-family:var(--mono);font-size:11px;opacity:0.7">Partial text: ${(candidate?.content?.parts?.[0]?.text || '').slice(0, 300)}&hellip;</span></div>`;
+        return;
+      }
+      raw = candidate?.content?.parts?.[0]?.text || '';
+    } else {
+      raw = data.content?.[0]?.text || '';
+    }
+
+    let result;
+    try {
+      result = JSON.parse(raw.replace(/```json|```/g, '').trim());
+    } catch(e) {
+      out.innerHTML = `<div class="error-card">Could not parse model response.<br><br><span style="font-family:var(--mono);font-size:11px;opacity:0.6">${raw}</span></div>`;
+      return;
+    }
+
+    const conf = result.confidence || 0;
+    const confColor = getConfColor(conf);
+    const tagClass = getRCTagClass(result.root_cause);
+    const banner = getActionBanner(result.continue_execution, result.root_cause);
+
+    const exclHTML = (result.excluded_strategies || []).map(s =>
+      `<span class="tag tag-red">${s}</span>`).join('') || `<span class="tag tag-gray">none</span>`;
+
+    const constraintsHTML = (result.updated_constraints || []).length
+      ? `<div class="constraints-list">${result.updated_constraints.map(c => `<div class="constraint-item">${c}</div>`).join('')}</div>`
+      : `<span style="font-size:12px;color:var(--muted)">No additional constraints</span>`;
+
+    out.innerHTML = `
+      <div class="result-card">
+        <div class="result-header">
+          <div class="status-dot ${conf >= 0.8 ? 'dot-green' : conf >= 0.6 ? 'dot-amber' : 'dot-red'}"></div>
+          <div class="result-title">Diagnosis complete</div>
+          <div class="result-meta">confidence: ${(conf*100).toFixed(0)}%</div>
+        </div>
+        <div class="result-body">
+
+          <div class="output-grid">
+            <div class="output-field">
+              <div class="output-key">Root cause</div>
+              <div style="margin-top:3px"><span class="tag ${tagClass}">${result.root_cause || '—'}</span></div>
+            </div>
+            <div class="output-field">
+              <div class="output-key">Continue execution</div>
+              <div style="margin-top:3px"><span class="tag ${result.continue_execution ? 'tag-green' : 'tag-red'}">${result.continue_execution ? 'YES' : 'NO'}</span></div>
+            </div>
+            <div class="output-field" style="grid-column:span 2">
+              <div class="output-key">Failure pattern</div>
+              <div style="font-size:12px;color:var(--muted);margin-top:2px">${result.failure_category || '—'}</div>
+            </div>
+          </div>
+
+          <div style="margin-bottom:14px">
+            <div class="output-key" style="margin-bottom:6px">Confidence</div>
+            <div class="confidence-bar">
+              <div class="confidence-fill" style="width:${(conf*100).toFixed(0)}%;background:${confColor}"></div>
+            </div>
+            <div style="font-size:11px;color:var(--muted);margin-top:4px">${(conf*100).toFixed(0)}% — ${conf >= 0.8 ? 'high — proceed with strategy rewrite' : conf >= 0.6 ? 'moderate — verify before generating' : 'low — ask user to clarify'}</div>
+          </div>
+
+          ${result.diagnosis_summary ? `
+          <div style="margin-bottom:14px;padding:10px 12px;background:var(--surface2);border-radius:7px;border-left:3px solid var(--accent)">
+            <div class="output-key" style="margin-bottom:4px">Evidence</div>
+            <div style="font-size:12px;color:var(--muted);line-height:1.6">${result.diagnosis_summary}</div>
+          </div>` : ''}
+
+          <div class="divider"></div>
+
+          <div class="output-grid">
+            <div class="output-field">
+              <div class="output-key">Recommended strategy</div>
+              <div style="margin-top:4px">${result.recommended_strategy
+                ? `<span class="tag tag-green">${result.recommended_strategy}</span>`
+                : `<span style="font-size:12px;color:var(--muted)">ask user</span>`}</div>
+            </div>
+            <div class="output-field">
+              <div class="output-key">Blocking requirement</div>
+              <div style="font-size:12px;color:var(--text);margin-top:4px;line-height:1.4;font-weight:500">${result.blocking_requirement || `<span style="color:var(--muted);font-weight:400">none identified</span>`}</div>
+            </div>
+          </div>
+
+          <div style="margin-top:12px">
+            <div class="output-key" style="margin-bottom:6px">Excluded strategies</div>
+            <div class="tag-row">${exclHTML}</div>
+          </div>
+
+          ${result.missing_information ? `
+          <div style="margin-top:12px">
+            <div class="output-key" style="margin-bottom:4px">Missing information</div>
+            ${typeof result.missing_information === 'object' ? `
+              <div style="display:flex;gap:6px;align-items:center;margin-bottom:4px">
+                <span class="tag ${result.missing_information.type === 'user' ? 'tag-amber' : 'tag-accent'}">${result.missing_information.type === 'user' ? 'Needs user input' : 'Needs env probe'}</span>
+              </div>
+              <div style="font-size:12px;color:var(--amber);line-height:1.5;font-weight:500">${result.missing_information.question}</div>
+            ` : `<div style="font-size:12px;color:var(--amber);line-height:1.5;font-weight:500">${result.missing_information}</div>`}
+          </div>` : ''}
+
+          <div class="divider"></div>
+
+          <div>
+            <div class="output-key" style="margin-bottom:7px">Updated constraints → injected into next prompt</div>
+            ${constraintsHTML}
+          </div>
+
+          <div style="margin-top:14px">${banner}</div>
+
+          <details>
+            <summary>Raw JSON output (TroubleshooterOutput)</summary>
+            <div class="raw-json">${JSON.stringify(result, null, 2)}</div>
+          </details>
+
+        </div>
+      </div>
+    `;
+
+  } catch(err) {
+    out.innerHTML = `<div class="error-card">Request failed: ${err.message}</div>`;
+  } finally {
+    btn.disabled = false;
+    spinner.style.display = 'none';
+    label.textContent = '▶ Run troubleshooter';
+  }
+}
+</script>
+</body>
+</html>

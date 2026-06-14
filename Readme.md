@@ -1,6 +1,7 @@
 # Doomloop Troubleshooter — Architecture Spec
 
 > A diagnostic agent that detects, classifies, and breaks cyclic failure patterns in coding agents.
+*[DL Troubleshooter Live demo](https://jargon4072.github.io/doomloop-detection/) — paste a rejection ledger and watch the troubleshooter diagnose it in real time across Anthropic, OpenAI, or Gemini.*
 
 ![Doomloop Troubleshooter Architecture](architecture-diagram.png)
 
@@ -683,6 +684,4 @@ Every resolved doomloop that gets captured as a skill reduces future loop probab
 | 6 | **Skill Library** | Medium (storage + matching) | Compounds | Add success_rate weighting (Gap 3) before the library grows large. |
 
 ---
-
-*[Live demo](troubleshooter-demo.html) — paste a rejection ledger and watch the troubleshooter diagnose it in real time across Anthropic, OpenAI, or Gemini.*
 
